@@ -1,0 +1,37 @@
+name: Upstream Sync
+
+permissions:
+  contents: write
+
+on:
+  schedule:
+    # 每天 UTC 00:00 自动触发一次（北京时间 08:00）
+    - cron: '0 0 * * *'
+  # 支持在 GitHub 页面手动一键触发
+  workflow_dispatch:
+
+jobs:
+  sync_latest_from_upstream:
+    name: Sync latest commits from upstream repo
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+
+      - name: Sync upstream changes
+        id: sync
+        uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.1
+        with:
+          upstream_sync_repo: router-for-me/CLIProxyAPI
+          upstream_sync_branch: main # 或 master，根据上游主分支填写
+          target_sync_branch: main   # 你的 fork 仓库对应分支
+          target_repo_token: ${{ secrets.GITHUB_TOKEN }}
+          # 遇到冲突时是否强制覆盖本地提交（谨慎开启）
+          test_mode: false
+
+      - name: Sync check
+        if: failure()
+        run: |
+          echo "同步失败，通常是因为你的分支有未合并的自定义改动导致冲突。"
+          exit 1
