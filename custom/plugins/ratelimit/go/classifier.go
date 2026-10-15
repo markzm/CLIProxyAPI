@@ -13,10 +13,12 @@ func NewClassifier() *Classifier {
 	return &Classifier{}
 }
 
-// Resolve determines the normalized client type string.
-func (c *Classifier) Resolve(headers http.Header, sourceFormat, path string) string {
+// Resolve returns the claimed client type from headers and request attributes.
+// Headers are client claims, not authenticated identities; callers must map names that are not
+// configured to the default bucket.
+func (c *Classifier) Resolve(headers http.Header, sourceFormat string) string {
 	if headers != nil {
-		// 1. Check explicit client header override first.
+		// 1. Explicit client header override.
 		if ct := strings.TrimSpace(headers.Get("X-Client-Type")); ct != "" {
 			return strings.ToLower(ct)
 		}
@@ -24,28 +26,22 @@ func (c *Classifier) Resolve(headers http.Header, sourceFormat, path string) str
 			return strings.ToLower(ct)
 		}
 
-		// 2. Inspect User-Agent fingerprint.
-		ua := headers.Get("User-Agent")
-		if clientType := matchUserAgent(ua); clientType != "" {
+		// 2. User-Agent fingerprint.
+		if clientType := matchUserAgent(headers.Get("User-Agent")); clientType != "" {
 			return clientType
 		}
 	}
 
-	// 3. Fallback based on path or sourceFormat if available.
-	lowerPath := strings.ToLower(strings.TrimSpace(path))
-	lowerFormat := strings.ToLower(strings.TrimSpace(sourceFormat))
-
-	if strings.Contains(lowerPath, "/backend-api/codex") || strings.Contains(lowerPath, "/responses") || lowerFormat == "codex" || lowerFormat == "openai-response" {
+	// 3. Fallback based on the client protocol.
+	switch strings.ToLower(strings.TrimSpace(sourceFormat)) {
+	case "codex", "openai-response":
 		return "codex"
-	}
-	if strings.Contains(lowerPath, "/messages") || lowerFormat == "claude" {
+	case "claude":
 		return "claude-code"
-	}
-	if strings.Contains(lowerPath, "/v1beta") || lowerFormat == "gemini" {
+	case "gemini":
 		return "gemini"
 	}
-
-	return "default"
+	return defaultTypeName
 }
 
 func matchUserAgent(ua string) string {

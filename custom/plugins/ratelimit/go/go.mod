@@ -1,4 +1,4 @@
-module github.com/router-for-me/CLIProxyAPI/v8/examples/plugin/ratelimit/go
+module github.com/router-for-me/CLIProxyAPI/v8/custom/plugins/ratelimit/go
 
 go 1.26.0
 
