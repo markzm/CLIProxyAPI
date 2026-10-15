@@ -20,7 +20,7 @@
 4. **客户端断开即退出队列**：宿主在客户端断开后会发送 `request.complete`，插件据此立即将该请求移出队列，不会占用并发配额。
 5. **全局排队预算**：每个排队请求都会占用宿主的一个原生调用（即一个 OS 线程），`max_total_waiters` 与 `max_queued_bytes` 限制所有类型合计的排队数量与请求字节数，避免线程耗尽导致进程崩溃。
 6. **配置热更新不丢请求**：重新加载配置时复用已有队列，排队中的请求与滑动窗口历史均保留；所有限额在同一把锁内一次性生效。
-7. **带鉴权的实时指标**：指标端点需要插件自身配置的 `metrics_token`。
+7. **实时指标**：通过插件 resource 端点查看各类型的并发、排队与凭据同步状态。
 
 ---
 
@@ -34,7 +34,6 @@ plugins:
     ratelimit:
       enabled: true                 # 由宿主管理的启用开关
 
-      metrics_token: "change-me"    # 指标端点 Bearer Token；为空时指标端点返回 403
       max_total_waiters: 1000       # 全部类型合计的最大排队请求数（每个占用一个 OS 线程）
       max_queued_bytes: 268435456   # 全部排队请求的最大请求体总字节数
 
@@ -102,13 +101,12 @@ cd custom/plugins/ratelimit/go && go test -race ./...
 ## 四、监控端点
 
 ```bash
-curl -H "Authorization: Bearer <metrics_token>" \
-  http://localhost:8317/v0/resource/plugins/ratelimit/ratelimit/metrics
+curl http://localhost:8317/v0/resource/plugins/ratelimit/ratelimit/metrics
 
-RATELIMIT_METRICS_TOKEN=<metrics_token> python3 custom/plugins/ratelimit/scripts/monitor_queue.py
+python3 custom/plugins/ratelimit/scripts/monitor_queue.py
 ```
 
-宿主不会对插件 resource 路由做管理鉴权，因此由插件自行校验 `metrics_token`：未配置时返回 403，Token 错误时返回 401。
+> 宿主不会对插件 resource 路由做鉴权，该端点对所有能访问服务端口的客户端开放。如需限制访问，请在反向代理或防火墙层控制。
 
 返回内容包括：
 - `ratelimit_metrics.<类型>`：`channel`、`in_flight_requests`、`queue_depth`、`effective_capacity`、`effective_max_queue`、`active_auth_count`（按该类型的渠道统计）、`admitted_requests`、`queued_requests`、`rejected_queue_full`、`rejected_global_limit`、`rejected_timeout`、`canceled_in_queue`、`avg_wait_ms`/`max_wait_ms`（仅统计排队后被准入的请求）、窗口指标。

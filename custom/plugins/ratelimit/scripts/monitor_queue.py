@@ -503,8 +503,8 @@ def main():
     )
     parser.add_argument(
         "--token",
-        default=os.environ.get("RATELIMIT_METRICS_TOKEN", ""),
-        help="限流插件 metrics_token (默认读取环境变量 RATELIMIT_METRICS_TOKEN)",
+        default="admin123456",
+        help="Management Bearer 认证 Token (默认为 admin123456)",
     )
     parser.add_argument(
         "--interval",

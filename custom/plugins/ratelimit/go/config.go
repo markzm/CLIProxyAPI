@@ -53,7 +53,6 @@ type PluginConfig struct {
 	WindowMaxRequests       int
 	MaxTotalWaiters         int
 	MaxQueuedBytes          int64
-	MetricsToken            string
 	Types                   map[string]ClientTypeRule
 	DefaultRule             ClientTypeRule
 }
@@ -86,7 +85,6 @@ type rawConfig struct {
 	WindowMaxRequests       *int               `yaml:"window_max_requests"`
 	MaxTotalWaiters         *int               `yaml:"max_total_waiters"`
 	MaxQueuedBytes          *int64             `yaml:"max_queued_bytes"`
-	MetricsToken            *string            `yaml:"metrics_token"`
 	Types                   map[string]rawRule `yaml:"types"`
 	DefaultRule             *rawRule           `yaml:"default_rule"`
 }
@@ -148,9 +146,6 @@ func ParseConfig(rawYAML []byte) (PluginConfig, error) {
 	setInt(&cfg.MaxTotalWaiters, raw.MaxTotalWaiters)
 	if raw.MaxQueuedBytes != nil {
 		cfg.MaxQueuedBytes = *raw.MaxQueuedBytes
-	}
-	if raw.MetricsToken != nil {
-		cfg.MetricsToken = strings.TrimSpace(*raw.MetricsToken)
 	}
 	if raw.DefaultRule != nil {
 		cfg.DefaultRule = raw.DefaultRule.mergeInto(cfg.DefaultRule)

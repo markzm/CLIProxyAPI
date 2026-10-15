@@ -591,22 +591,11 @@ func managementCall(t *testing.T, headers http.Header) (int, map[string]any) {
 	return resp.StatusCode, body
 }
 
-func TestManagement_RequiresToken(t *testing.T) {
-	useState(t, "", authHost())
-	if status, _ := managementCall(t, nil); status != http.StatusForbidden {
-		t.Fatalf("no token configured: status = %d, want 403", status)
-	}
-
-	useState(t, "metrics_token: s3cret\n", authHost(pluginapi.HostAuthFileEntry{Provider: "claude", Status: "active"}))
-	if status, _ := managementCall(t, nil); status != http.StatusUnauthorized {
-		t.Fatalf("missing header: status = %d, want 401", status)
-	}
-	if status, _ := managementCall(t, http.Header{"Authorization": {"Bearer wrong"}}); status != http.StatusUnauthorized {
-		t.Fatalf("wrong token: status = %d, want 401", status)
-	}
-	status, body := managementCall(t, http.Header{"Authorization": {"Bearer s3cret"}})
+func TestManagement_ServesMetrics(t *testing.T) {
+	useState(t, "", authHost(pluginapi.HostAuthFileEntry{Provider: "claude", Status: "active"}))
+	status, body := managementCall(t, nil)
 	if status != http.StatusOK {
-		t.Fatalf("valid token: status = %d", status)
+		t.Fatalf("status = %d, want 200", status)
 	}
 	metrics := body["ratelimit_metrics"].(map[string]any)
 	claude := metrics["claude-code"].(map[string]any)

@@ -57,13 +57,11 @@ import "C"
 
 import (
 	"context"
-	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -350,7 +348,7 @@ func handleMethod(method string, request []byte) ([]byte, error) {
 			Resources: []managementResource{{
 				Path:        "/ratelimit/metrics",
 				Menu:        "Rate Limit Metrics",
-				Description: "Real-time client rate-limiting, queuing and concurrency metrics (requires metrics_token)",
+				Description: "Real-time client rate-limiting, queuing and concurrency metrics",
 			}},
 		})
 	case pluginabi.MethodManagementHandle:
@@ -377,7 +375,6 @@ func pluginRegistration() registration {
 				{Name: "window_max_requests", Type: pluginapi.ConfigFieldTypeInteger, Description: "Max requests admitted within the sliding window before requests queue (0 = disabled)"},
 				{Name: "max_total_waiters", Type: pluginapi.ConfigFieldTypeInteger, Description: "Max queued requests across all client types; each holds one OS thread (default: 1000)"},
 				{Name: "max_queued_bytes", Type: pluginapi.ConfigFieldTypeInteger, Description: "Max total payload bytes of queued requests (default: 268435456)"},
-				{Name: "metrics_token", Type: pluginapi.ConfigFieldTypeString, Description: "Bearer token required by the metrics resource; metrics are disabled when empty"},
 			},
 		},
 		Capabilities: registrationCapability{
@@ -401,9 +398,6 @@ func handleReconfigure(request []byte) ([]byte, error) {
 	}
 	state.install(cfg)
 	state.syncAuths(true)
-	if cfg.MetricsToken == "" {
-		state.log("info", "[RATELIMIT_CONFIGURED] metrics resource disabled: metrics_token is not set")
-	}
 	state.log("info", "[RATELIMIT_CONFIGURED] plugin configuration loaded successfully")
 	return okEnvelope(pluginRegistration())
 }
@@ -507,19 +501,6 @@ func jsonManagementResponse(status int, body any) ([]byte, error) {
 	})
 }
 
-// authorizedMetrics checks the plugin-owned bearer token. The host serves plugin resources
-// without management authentication, so the plugin must authenticate them itself.
-func authorizedMetrics(token string, headers http.Header) bool {
-	if token == "" {
-		return false
-	}
-	value := strings.TrimSpace(headers.Get("Authorization"))
-	if len(value) < 7 || !strings.EqualFold(value[:7], "bearer ") {
-		return false
-	}
-	return subtle.ConstantTimeCompare([]byte(strings.TrimSpace(value[7:])), []byte(token)) == 1
-}
-
 func handleManagement(request []byte) ([]byte, error) {
 	var req managementRequest
 	if len(request) > 0 {
@@ -528,12 +509,6 @@ func handleManagement(request []byte) ([]byte, error) {
 		}
 	}
 	rs := state.current.Load()
-	if rs.cfg.MetricsToken == "" {
-		return jsonManagementResponse(http.StatusForbidden, map[string]string{"error": "metrics disabled: set metrics_token in the ratelimit plugin config"})
-	}
-	if !authorizedMetrics(rs.cfg.MetricsToken, req.Headers) {
-		return jsonManagementResponse(http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
-	}
 
 	state.maybeSyncAuths()
 	channels := make(map[string]string, len(rs.queues))
