@@ -380,19 +380,22 @@ func TestAuthSync_EligibilityAndStaleSnapshot(t *testing.T) {
 		}
 		return json.Marshal(authListResponse{Files: []pluginapi.HostAuthFileEntry{
 			{Provider: "codex", Status: "active"},
-			{Provider: "codex", Status: "error", Unavailable: true},
+			{Provider: "codex", Status: "error", Unavailable: true}, // revoked: no recovery time
 			{Provider: "codex", Status: "active", Disabled: true},
 			{Provider: "codex", Status: "disabled"},
+			{Provider: "codex", Status: "active", Unavailable: true, NextRetryAfter: time.Now().Add(time.Minute)},  // cooling
+			{Provider: "codex", Status: "active", Unavailable: true, NextRetryAfter: time.Now().Add(-time.Minute)}, // cooldown expired, flag cleared lazily by the host
+			{Provider: "codex", Status: "error"},                                                                   // transient error without unavailable: the scheduler still uses it
 			{Type: "Claude", Status: "active"},
 		}})
 	})
 	snap, _ := m.Refresh(true)
-	if snap.Counts["codex"] != 1 || snap.Counts["claude"] != 1 || snap.Stale {
+	if snap.Counts["codex"] != 3 || snap.Counts["claude"] != 1 || snap.Stale {
 		t.Fatalf("snapshot = %+v", snap)
 	}
 	fail = true
 	snap, _ = m.Refresh(true)
-	if !snap.Stale || snap.Counts["codex"] != 1 {
+	if !snap.Stale || snap.Counts["codex"] != 3 {
 		t.Fatalf("failed refresh must keep last good counts: %+v", snap)
 	}
 }

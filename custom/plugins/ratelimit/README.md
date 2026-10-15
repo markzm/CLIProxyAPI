@@ -12,7 +12,7 @@
 
 1. **按客户端类型分流**：通过 `User-Agent` 指纹（Codex、Claude Code、Gemini/Antigravity、IDE 扩展、脚本）或显式 `X-Client-Type` / `X-Caller-Type` 标头分类。
    - 只有 `types` 中**已配置**的类型名会被采用；其余名称一律归入 `default` 桶，客户端无法通过伪造标头创建新的独立配额。
-2. **按渠道有效凭据数动态调容**：通过宿主回调 `host.auth.list` 统计各渠道的可用凭据（排除 `disabled`、`unavailable`、状态为 `error`/`disabled` 的凭据），计算：
+2. **按渠道有效凭据数动态调容**：通过宿主回调 `host.auth.list` 统计各渠道的可用凭据，口径与宿主调度器一致（排除已停用、状态为 `disabled`，以及 `unavailable` 且恢复时间未到或没有恢复时间的凭据；冷却已到期的凭据仍计入，因为宿主是懒清除不可用标记的），计算：
    $$\text{EffectiveCapacity} = \text{ActiveAuthCount} \times \text{PerAuthConcurrency}$$
    - 读取失败时保留上一次成功的快照（指标中 `auth_sync.stale=true`）。
    - 无可用凭据时按 1 个账号计算，使请求仍能到达宿主并得到宿主自身的错误响应。

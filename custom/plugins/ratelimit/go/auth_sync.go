@@ -78,8 +78,9 @@ func (m *AuthSyncManager) fetchCounts() (map[string]int, error) {
 		return nil, fmt.Errorf("decode auth list: %w", errUnmarshal)
 	}
 	counts := make(map[string]int)
+	now := time.Now()
 	for _, file := range resp.Files {
-		if !authEligible(file) {
+		if !authEligible(file, now) {
 			continue
 		}
 		provider := normalizeName(file.Provider)
@@ -93,15 +94,20 @@ func (m *AuthSyncManager) fetchCounts() (map[string]int, error) {
 	return counts, nil
 }
 
-// authEligible reports whether a credential can currently serve traffic.
-// The host reports unavailability as a boolean and uses status values such as "error"/"disabled".
-func authEligible(file pluginapi.HostAuthFileEntry) bool {
-	if file.Disabled || file.Unavailable {
+// authEligible mirrors the host scheduler's availabilityBlock: a credential is
+// schedulable unless it is disabled, or marked unavailable with its recovery time
+// still in the future or absent (a permanent failure). The host clears the
+// unavailable flag lazily, so an expired cooldown must still count as capacity;
+// otherwise providers that hit 429s often (Codex) are under-counted.
+func authEligible(file pluginapi.HostAuthFileEntry, now time.Time) bool {
+	if file.Disabled || strings.EqualFold(strings.TrimSpace(file.Status), "disabled") {
 		return false
 	}
-	switch strings.ToLower(strings.TrimSpace(file.Status)) {
-	case "error", "disabled":
-		return false
+	if !file.Unavailable {
+		return true
 	}
-	return true
+	if file.NextRetryAfter.IsZero() {
+		return false // no recovery scheduled: revoked token or similar
+	}
+	return !file.NextRetryAfter.After(now)
 }
