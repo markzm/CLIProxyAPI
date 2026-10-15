@@ -1,0 +1,29 @@
+custom/plugins/ratelimit/go/main.go
+  68254637525b310e 351
+custom/plugins/ratelimit/go/ratelimit_test.go
+  68254637525b310e 594-596,598
+custom/plugins/ratelimit/README.md
+  68254637525b310e 23,104,109
+custom/plugins/ratelimit/scripts/monitor_queue.py
+  68254637525b310e 506-507
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.0.37",
+  "base_commit_sha": "9a592011cc949bab3d6a9380df133bf58334ab45",
+  "prompts": {
+    "68254637525b310e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b9c6c733-1f99-4a5d-bb43-4f2e96afea61",
+        "model": "claude-haiku-5-5"
+      },
+      "human_author": "张锚 <beichen@tsign.cn>",
+      "messages": [],
+      "total_additions": 11,
+      "total_deletions": 54,
+      "accepted_lines": 10,
+      "overriden_lines": 0
+    }
+  }
+}
