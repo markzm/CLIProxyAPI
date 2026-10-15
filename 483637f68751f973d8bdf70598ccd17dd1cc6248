@@ -1,0 +1,21 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.0.37",
+  "base_commit_sha": "483637f68751f973d8bdf70598ccd17dd1cc6248",
+  "prompts": {
+    "e31a3b151a89e8b2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bf1a7105-a92c-4d7a-aa91-bbcc35778353",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "张锚 <beichen@tsign.cn>",
+      "messages": [],
+      "total_additions": 1675,
+      "total_deletions": 1226,
+      "accepted_lines": 344,
+      "overriden_lines": 0
+    }
+  }
+}
